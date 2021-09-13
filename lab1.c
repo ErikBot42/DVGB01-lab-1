@@ -6,6 +6,11 @@
 #include <semaphore.h>
 #include <time.h>
 #include <errno.h>
+#include <signal.h>
+
+
+volatile int keepRunning = 1;
+void signalHandler(int iSignal) { if (iSignal = SIGINT) {keepRunning=0;}}
 
 // Mutex vars
 char *pBuffer;
@@ -80,6 +85,8 @@ void produce () // fully thread safe, even if it will only run from one thread.
 
 int main() 
 {
+	//printf("my id is: %d", pthread_getthreadid_np());
+	signal(SIGINT, &signalHandler);
 	pthread_mutex_init(&BufferMutex, NULL);
 	pthread_mutex_init(&IdMutex, NULL);
 	sem_init(&produceSemaphore, 0, 0);
@@ -115,15 +122,18 @@ int main()
 		consumers[i] = pthreadData;
 	}
 
-	while(1)
+	while(keepRunning)
 	{
 		waitSec(iTimeInterval);
 		produce();
 	}
+	
+	printf("killing other threads\n");
 
 	for (int i = 0; i<n; i++) 
 	{
-		pthread_join(consumers[i], NULL);
+		//pthread_join(consumers[i], NULL);
+		pthread_kill(consumers[i], SIGINT);
 	}
 	return 0;
 }
