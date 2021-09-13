@@ -1,3 +1,5 @@
+// Written by Erik Magnusson and Rasmus Angeleni Gjein
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,7 +12,6 @@
 
 
 volatile int keepRunning = 1;
-void signalHandler(int iSignal) { if (iSignal = SIGINT) {keepRunning=0;}}
 
 // Mutex vars
 char *pBuffer;
@@ -23,6 +24,13 @@ pthread_mutex_t BufferMutex;
 pthread_mutex_t IdMutex;
 sem_t produceSemaphore; // number of writable spaces
 sem_t consumeSemaphore; // number of things to read
+
+void signalHandler(int iSignal) { 
+	if (iSignal = SIGINT) {
+		keepRunning=0; 
+		sem_post(&consumeSemaphore); // To unlock consumers so that they can exit
+	}
+}
 
 int iConsumerTimeInterVal = 0;
 
@@ -54,6 +62,8 @@ void * consumer(void * arg)
 	do 
 	{
 		sem_wait(&consumeSemaphore);
+		if (!keepRunning) break;
+
 		pthread_mutex_lock(&BufferMutex);
 
 		printf("reading value (id: %d): %c\n", myId, pBuffer[iReadIndex++]);
@@ -62,7 +72,8 @@ void * consumer(void * arg)
 		pthread_mutex_unlock(&BufferMutex);
 		sem_post(&produceSemaphore);
 		waitSec(iConsumerTimeInterVal);
-	} while(1);
+	} while(keepRunning);
+	printf("Thread %d is exiting.\n", myId);
 	pthread_exit(0);
 	return arg;
 }
@@ -132,8 +143,8 @@ int main()
 
 	for (int i = 0; i<n; i++) 
 	{
-		//pthread_join(consumers[i], NULL);
 		pthread_kill(consumers[i], SIGINT);
+		pthread_join(consumers[i], NULL);
 	}
 	return 0;
 }
