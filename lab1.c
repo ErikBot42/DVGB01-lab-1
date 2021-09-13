@@ -46,11 +46,9 @@ void print_buffer(char * arr, int size)
 void waitSec (int seconds)
 {
 	sleep(seconds);
-	//clock_t now = clock();
-	//clock_t next = now + CLOCKS_PER_SEC*seconds;
-	//while (clock()<next);
 }
 
+// Consumer thread function
 void * consumer(void * arg)
 {
 	static int id;
@@ -78,6 +76,7 @@ void * consumer(void * arg)
 	return arg;
 }
 
+// Producer thread function
 void produce () // fully thread safe, even if it will only run from one thread.
 {
 	sem_wait(&produceSemaphore);
@@ -96,7 +95,6 @@ void produce () // fully thread safe, even if it will only run from one thread.
 
 int main() 
 {
-	//printf("my id is: %d", pthread_getthreadid_np());
 	signal(SIGINT, &signalHandler);
 	pthread_mutex_init(&BufferMutex, NULL);
 	pthread_mutex_init(&IdMutex, NULL);
